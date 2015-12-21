@@ -6,3 +6,5 @@ rvm:
 script:
   - bundle install
   - bundle exec rake
+env:
+  - CFLAGS=-std=c99
