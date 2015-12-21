@@ -6,13 +6,13 @@ require 'postfix_status_line/version'
 Gem::Specification.new do |spec|
   spec.name          = 'postfix_status_line'
   spec.version       = PostfixStatusLine::VERSION
-  spec.authors       = ["Genki Sugawara"]
-  spec.email         = ["sugawara@cookpad.com"]
+  spec.authors       = ['Genki Sugawara']
+  spec.email         = ['sgwr_dts@yahoo.co.jp']
 
-  spec.summary       = %q{TODO: Write a short summary, because Rubygems requires one.}
-  spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "TODO: Put your gem's website or public repo URL here."
-  spec.license       = "MIT"
+  spec.summary       = %q{Postfix Status Line Log Parser implemented by C.}
+  spec.description   = %q{Postfix Status Line Log Parser implemented by C.}
+  spec.homepage      = 'https://github.com/winebarrel/postfix_status_line'
+  spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.bindir        = 'exe'
