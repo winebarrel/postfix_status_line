@@ -121,6 +121,27 @@ static void put_attr(char *str, VALUE hash) {
   }
 
   rb_hash_aset(hash, v_key, v_value);
+
+  if (strcmp(str, "to") == 0) {
+    char *domain = strchr(value, '@');
+
+    if (domain == NULL) {
+      return;
+    }
+
+    domain++;
+
+    char *bracket = strchr(domain, '>');
+
+    if (bracket == NULL) {
+      v_value = rb_str_new2(domain);
+    } else {
+      size_t len = bracket - domain;
+      v_value = rb_str_new(domain, len);
+    }
+
+    rb_hash_aset(hash, rb_str_new2("domain"), v_value);
+  }
 }
 
 static void split_line2(char *str, int mask, VALUE hash) {

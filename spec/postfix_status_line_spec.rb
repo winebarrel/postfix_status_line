@@ -14,6 +14,7 @@ describe PostfixStatusLine do
       is_expected.to eq({
         "delay" => 0.57,
         "delays" => "0.11/0.03/0.23/0.19",
+        "domain" => "bellsouth.net",
         "dsn" => "2.0.0",
         "hostname" => "MyHOSTNAME",
         "process" => "postfix/smtp[26490]",
@@ -33,6 +34,7 @@ describe PostfixStatusLine do
       is_expected.to eq({
         "delay" => 0.57,
         "delays" => "0.11/0.03/0.23/0.19",
+        "domain" => "bellsouth.net",
         "dsn" => "2.0.0",
         "hostname" => "MyHOSTNAME",
         "process" => "postfix/smtp[26490]",
