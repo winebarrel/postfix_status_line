@@ -111,7 +111,16 @@ static void put_attr(char *str, VALUE hash) {
   *value = '\0';
   value++;
 
-  rb_hash_aset(hash, rb_str_new2(str), rb_str_new2(value));
+  VALUE v_key = rb_str_new2(str);
+  VALUE v_value;
+
+  if (strcmp(str, "delay") == 0) {
+    v_value = rb_float_new(atof(value));
+  } else {
+    v_value = rb_str_new2(value);
+  }
+
+  rb_hash_aset(hash, v_key, v_value);
 }
 
 static void split_line2(char *str, int mask, VALUE hash) {
