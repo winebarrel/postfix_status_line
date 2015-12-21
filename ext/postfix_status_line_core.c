@@ -86,15 +86,18 @@ static int split_line1(char buf[], char **time, char **hostname, char **process,
 }
 
 static void mask_email(char *str) {
-  int mask = 0;
+  char *ptr = NULL;
 
   while (*str) {
-    if (*str == '@') {
-      mask = 0;
+    if (*str == '@' && ptr != NULL) {
+      while (ptr < str) {
+        *ptr = '*';
+        ptr++;
+      }
+
+      ptr = NULL;
     } else if (*str == '<') {
-      mask = 1;
-    } else if (mask) {
-      *str = '*';
+      ptr = str + 1;
     }
 
     str++;
