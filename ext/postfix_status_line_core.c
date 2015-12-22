@@ -189,13 +189,16 @@ static void split_line2(char *str, int mask, VALUE hash) {
 
 static void put_time(char *str, VALUE hash) {
   time_t now = time(NULL);
-  struct tm *t = localtime(&now);
+  struct tm *tm_now = localtime(&now);
+  struct tm t;
+  memset(&t, 0, sizeof(t));
 
-  if (strptime(str, "%b %d %H:%M:%S", t) == NULL) {
+  if (strptime(str, "%b %d %H:%M:%S", &t) == NULL) {
     return;
   }
 
-  time_t epoch = mktime(t);
+  t.tm_year = tm_now->tm_year;
+  time_t epoch = mktime(&t);
 
   if (epoch == -1) {
     return;
