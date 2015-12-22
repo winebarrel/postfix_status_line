@@ -104,6 +104,40 @@ static void mask_email(char *str) {
   }
 }
 
+static void put_domain(char *value, VALUE hash) {
+  char *domain = strchr(value, '@');
+
+  if (domain == NULL) {
+    return;
+  }
+
+  domain++;
+
+  char *bracket = strchr(domain, '>');
+  VALUE v_value;
+
+  if (bracket == NULL) {
+    v_value = rb_str_new2(domain);
+  } else {
+    size_t len = bracket - domain;
+    v_value = rb_str_new(domain, len);
+  }
+
+  rb_hash_aset(hash, rb_str_new2("domain"), v_value);
+}
+
+static void put_status(char *value, VALUE hash) {
+  char *reason = strchr(value, ' ');
+
+  if (reason != NULL) {
+    *reason = '\0';
+    reason++;
+    rb_hash_aset(hash, rb_str_new2("reason"), rb_str_new2(reason));
+  }
+
+  rb_hash_aset(hash, rb_str_new2("status"), rb_str_new2(value));
+}
+
 static void put_attr(char *str, VALUE hash) {
   char *value = strchr(str, '=');
 
@@ -115,35 +149,19 @@ static void put_attr(char *str, VALUE hash) {
   value++;
 
   VALUE v_key = rb_str_new2(str);
-  VALUE v_value;
 
   if (strcmp(str, "delay") == 0) {
-    v_value = rb_float_new(atof(value));
+    VALUE v_value = rb_float_new(atof(value));
+    rb_hash_aset(hash, v_key, v_value);
+  } else if (strcmp(str, "status") == 0) {
+    put_status(value, hash);
   } else {
-    v_value = rb_str_new2(value);
+    VALUE v_value = rb_str_new2(value);
+    rb_hash_aset(hash, v_key, v_value);
   }
 
-  rb_hash_aset(hash, v_key, v_value);
-
   if (strcmp(str, "to") == 0) {
-    char *domain = strchr(value, '@');
-
-    if (domain == NULL) {
-      return;
-    }
-
-    domain++;
-
-    char *bracket = strchr(domain, '>');
-
-    if (bracket == NULL) {
-      v_value = rb_str_new2(domain);
-    } else {
-      size_t len = bracket - domain;
-      v_value = rb_str_new(domain, len);
-    }
-
-    rb_hash_aset(hash, rb_str_new2("domain"), v_value);
+    put_domain(value, hash);
   }
 }
 
