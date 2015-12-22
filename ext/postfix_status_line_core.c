@@ -68,14 +68,14 @@ static int split_p1(char *str, char **time, char **hostname, char **process) {
   return 0;
 }
 
-static int split_line1(char buf[], char **time, char **hostname, char **process, char **queue_id, char **attrs) {
+static int split_line1(char buf[], char **tm, char **hostname, char **process, char **queue_id, char **attrs) {
   char *p1, *p2, *p3;
 
   if (split3(buf, &p1, &p2, &p3) != 0) {
     return -1;
   }
 
-  if (split_p1(p1, time, hostname, process) != 0) {
+  if (split_p1(p1, tm, hostname, process) != 0) {
     return -1;
   }
 
@@ -187,6 +187,23 @@ static void split_line2(char *str, int mask, VALUE hash) {
   }
 }
 
+static void put_time(char *str, VALUE hash) {
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+
+  if (strptime(str, "%b %d %H:%M:%S", t) == NULL) {
+    return;
+  }
+
+  time_t epoch = mktime(t);
+
+  if (epoch == -1) {
+    return;
+  }
+
+  rb_hash_aset(hash, rb_str_new2("time"), LONG2NUM(epoch));
+}
+
 static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask) {
   Check_Type(v_str, T_STRING);
 
@@ -208,14 +225,14 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask)
   strncpy(buf, str, len);
   buf[len] = '\0';
 
-  char *time, *hostname, *process, *queue_id, *attrs;
+  char *tm, *hostname, *process, *queue_id, *attrs;
 
-  if (split_line1(buf, &time, &hostname, &process, &queue_id, &attrs) != 0) {
+  if (split_line1(buf, &tm, &hostname, &process, &queue_id, &attrs) != 0) {
     return Qnil;
   }
 
   VALUE hash = rb_hash_new();
-  rb_hash_aset(hash, rb_str_new2("time"), rb_str_new2(time));
+  put_time(tm, hash);
   rb_hash_aset(hash, rb_str_new2("hostname"), rb_str_new2(hostname));
   rb_hash_aset(hash, rb_str_new2("process"), rb_str_new2(process));
   rb_hash_aset(hash, rb_str_new2("queue_id"), rb_str_new2(queue_id));
