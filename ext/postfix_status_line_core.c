@@ -187,25 +187,6 @@ static void split_line2(char *str, int mask, VALUE hash) {
   }
 }
 
-static void put_time(char *str, VALUE hash) {
-  time_t now = time(NULL);
-  struct tm *tm_now = localtime(&now);
-  struct tm t;
-
-  if (strptime(str, "%b %d %H:%M:%S", &t) == NULL) {
-    return;
-  }
-
-  t.tm_year = tm_now->tm_year;
-  time_t epoch = mktime(&t);
-
-  if (epoch == -1) {
-    return;
-  }
-
-  rb_hash_aset(hash, rb_str_new2("time"), LONG2NUM(epoch));
-}
-
 static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask) {
   Check_Type(v_str, T_STRING);
 
@@ -234,7 +215,7 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask)
   }
 
   VALUE hash = rb_hash_new();
-  put_time(tm, hash);
+  rb_hash_aset(hash, rb_str_new2("time"), rb_str_new2(tm));
   rb_hash_aset(hash, rb_str_new2("hostname"), rb_str_new2(hostname));
   rb_hash_aset(hash, rb_str_new2("process"), rb_str_new2(process));
   rb_hash_aset(hash, rb_str_new2("queue_id"), rb_str_new2(queue_id));
