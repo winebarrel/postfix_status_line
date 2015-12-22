@@ -132,7 +132,7 @@ static void put_status(char *value, VALUE hash) {
   if (reason != NULL) {
     *reason = '\0';
     reason++;
-    rb_hash_aset(hash, rb_str_new2("reason"), rb_str_new2(reason));
+    rb_hash_aset(hash, rb_str_new2("status_detail"), rb_str_new2(reason));
   }
 
   rb_hash_aset(hash, rb_str_new2("status"), rb_str_new2(value));
