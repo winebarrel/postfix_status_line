@@ -1,6 +1,6 @@
 #include "postfix_status_line_core.h"
 
-static char *split(char **orig_str, char *delim, size_t delim_len) {
+static char *split(char **orig_str, const char *delim, size_t delim_len) {
   char *str = *orig_str;
   char *ptr = strstr(str, delim);
 
