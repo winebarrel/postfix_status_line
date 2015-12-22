@@ -191,7 +191,6 @@ static void put_time(char *str, VALUE hash) {
   time_t now = time(NULL);
   struct tm *tm_now = localtime(&now);
   struct tm t;
-  memset(&t, 0, sizeof(t));
 
   if (strptime(str, "%b %d %H:%M:%S", &t) == NULL) {
     return;
