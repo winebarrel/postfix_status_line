@@ -36,8 +36,10 @@ PostfixStatusLine.parse(status_line)
 #      "process" => "postfix/smtp[26490]",
 #      "queue_id" => "D53A72713E5",
 #      "relay" => "gateway-f1.isp.att.net[204.127.217.16]:25",
-#      "status" => "sent (250 ok ; id=20120227140036M0700qer4ne)",
+#      "status" => "sent",
+#      "reason" => "(250 ok ; id=20120227140036M0700qer4ne)",
 #      "time" => "Feb 27 09:02:37",
-#      "to" => "<*******@bellsouth.net>"
+#      "to" => "<*******@bellsouth.net>",
+#      "domain" => "bellsouth.net"
 #    }
 ```
