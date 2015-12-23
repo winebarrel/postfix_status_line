@@ -127,12 +127,12 @@ static void put_domain(char *value, VALUE hash) {
 }
 
 static void put_status(char *value, VALUE hash) {
-  char *reason = strchr(value, ' ');
+  char *detail = strchr(value, ' ');
 
-  if (reason != NULL) {
-    *reason = '\0';
-    reason++;
-    rb_hash_aset(hash, rb_str_new2("status_detail"), rb_str_new2(reason));
+  if (detail != NULL) {
+    *detail = '\0';
+    detail++;
+    rb_hash_aset(hash, rb_str_new2("status_detail"), rb_str_new2(detail));
   }
 
   rb_hash_aset(hash, rb_str_new2("status"), rb_str_new2(value));
@@ -174,6 +174,14 @@ static void split_line2(char *str, int mask, VALUE hash) {
 
   for (;;) {
     ptr = split(&str, ", ", 2);
+
+    // status detail includes ", "
+    if (strchr(str, '=') == NULL) {
+      *(str - 1) = ' ';
+      *(str - 2) = ' ';
+      str = ptr;
+      break;
+    }
 
     if (ptr == NULL) {
       break;

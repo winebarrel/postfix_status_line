@@ -72,4 +72,22 @@ describe PostfixStatusLine do
       })
     end
   end
+
+  context 'when expired' do
+    let(:status_line) do
+      'May 29 19:21:17 testserver postfix/qmgr[4833]: 9D7FE1D0051: from=<root@test.hogehoge>, status=expired, returned to sender'
+    end
+
+    it do
+      is_expected.to eq({
+        "from" => "<****@test.hogehoge>",
+        "hostname" => "testserver",
+        "process" => "postfix/qmgr[4833]",
+        "queue_id" => "9D7FE1D0051",
+        "status" => "expired",
+        "status_detail" => " returned to sender",
+        "time" => "May 29 19:21:17",
+      })
+    end
+  end
 end
