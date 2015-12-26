@@ -20,31 +20,31 @@ static char *split(char **orig_str, const char *delim, size_t delim_len) {
   return str;
 }
 
-static int split3(char buf[], char **p1, char **p2, char **p3) {
+static bool split3(char buf[], char **p1, char **p2, char **p3) {
   char *buf_ptr = buf;
 
   *p1 = split(&buf_ptr, ": ", 2);
 
   if (*p1 == NULL) {
-    return -1;
+    return false;
   }
 
   *p2 = split(&buf_ptr, ": ", 2);
 
   if (*p2 == NULL) {
-    return -1;
+    return false;
   }
 
   *p3 = buf_ptr;
 
-  return 0;
+  return true;
 }
 
-static int split_p1(char *str, char **time, char **hostname, char **process) {
+static bool split_p1(char *str, char **time, char **hostname, char **process) {
   *process = strrchr(str, ' ');
 
   if (*process == NULL) {
-    return -1;
+    return false;
   }
 
   **process = '\0';
@@ -53,11 +53,11 @@ static int split_p1(char *str, char **time, char **hostname, char **process) {
   *hostname = strrchr(str, ' ');
 
   if (*hostname == NULL) {
-    return -1;
+    return false;
   }
 
   if (*hostname - str < 1) {
-    return -1;
+    return false;
   }
 
   **hostname = '\0';
@@ -65,24 +65,24 @@ static int split_p1(char *str, char **time, char **hostname, char **process) {
 
   *time = str;
 
-  return 0;
+  return true;
 }
 
-static int split_line1(char buf[], char **tm, char **hostname, char **process, char **queue_id, char **attrs) {
+static bool split_line1(char buf[], char **tm, char **hostname, char **process, char **queue_id, char **attrs) {
   char *p1, *p2, *p3;
 
-  if (split3(buf, &p1, &p2, &p3) != 0) {
-    return -1;
+  if (!split3(buf, &p1, &p2, &p3)) {
+    return false;
   }
 
-  if (split_p1(p1, tm, hostname, process) != 0) {
-    return -1;
+  if (!split_p1(p1, tm, hostname, process)) {
+    return false;
   }
 
   *queue_id = p2;
   *attrs = p3;
 
-  return 0;
+  return true;
 }
 
 static void mask_email(char *str) {
@@ -221,7 +221,7 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask)
 
   char *tm, *hostname, *process, *queue_id, *attrs;
 
-  if (split_line1(buf, &tm, &hostname, &process, &queue_id, &attrs) != 0) {
+  if (!split_line1(buf, &tm, &hostname, &process, &queue_id, &attrs)) {
     return Qnil;
   }
 
