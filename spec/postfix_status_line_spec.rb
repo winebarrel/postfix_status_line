@@ -172,7 +172,7 @@ describe PostfixStatusLine do
 
     it do
       is_expected.to eq({
-        "from" => "<****@test.hogehoge>",
+        "from" => "****@test.hogehoge",
         "hostname" => "testserver",
         "process" => "postfix/qmgr[4833]",
         "queue_id" => "9D7FE1D0051",
@@ -182,4 +182,5 @@ describe PostfixStatusLine do
       })
     end
   end
+
 end

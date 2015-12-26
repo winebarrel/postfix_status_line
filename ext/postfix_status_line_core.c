@@ -216,6 +216,16 @@ static void put_to(char *value, VALUE hash, bool mask, bool include_hash, char *
   put_domain(value, hash);
 }
 
+static void put_from(char *value, VALUE hash, bool mask) {
+  char *email = remove_bracket(value);
+
+  if (mask) {
+    mask_email(value); // not "email"!
+  }
+
+  rb_hash_aset(hash, rb_str_new2("from"), rb_str_new2(email));
+}
+
 static void put_attr(char *str, VALUE hash, bool mask, bool include_hash, char *salt, size_t salt_len) {
   char *value = strchr(str, '=');
 
@@ -234,6 +244,8 @@ static void put_attr(char *str, VALUE hash, bool mask, bool include_hash, char *
     rb_hash_aset(hash, v_key, INT2NUM(atoi(value)));
   } else if (strcmp(str, "to") == 0) {
     put_to(value, hash, mask, include_hash, salt, salt_len);
+  } else if (strcmp(str, "from") == 0) {
+    put_from(value, hash, mask);
   } else if (strcmp(str, "status") == 0) {
     put_status(value, hash, mask);
   } else {
