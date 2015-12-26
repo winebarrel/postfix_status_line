@@ -1,5 +1,42 @@
 #include "postfix_status_line_core.h"
 
+#ifdef HAVE_OPENSSL_SHA_H
+static void sha512_to_str(unsigned char *hash, char buf[]) {
+  int i;
+
+  for (i = 0; i < SHA512_DIGEST_LENGTH; i++) {
+    snprintf(buf + (i * 2), 3, "%02x", hash[i]);
+  }
+}
+
+static bool digest_sha512(char *str, char *salt, size_t salt_len, char buf[]) {
+  SHA512_CTX ctx;
+  unsigned char hash[SHA512_DIGEST_LENGTH];
+
+  if (SHA512_Init(&ctx) != 1) {
+    return false;
+  }
+
+  if (SHA512_Update(&ctx, str, strlen(str)) != 1) {
+    return false;
+  }
+
+  if (salt != NULL) {
+    if (SHA512_Update(&ctx, salt, salt_len) != 1) {
+      return false;
+    }
+  }
+
+  if (SHA512_Final(hash, &ctx) != 1) {
+    return false;
+  }
+
+  sha512_to_str(hash, buf);
+
+  return true;
+}
+#endif // HAVE_OPENSSL_SHA_H
+
 static char *split(char **orig_str, const char *delim, size_t delim_len) {
   char *str = *orig_str;
   char *ptr = strstr((const char *) str, delim);
@@ -104,6 +141,24 @@ static void mask_email(char *str) {
   }
 }
 
+static char *remove_bracket(char *value) {
+  char *email = strchr(value, '<');
+
+  if (email == NULL) {
+    return value;
+  }
+
+  email++;
+
+  char *close_bracket = strchr(email, '>');
+
+  if (close_bracket != NULL) {
+    *close_bracket = '\0';
+  }
+
+  return email;
+}
+
 static void put_domain(char *value, VALUE hash) {
   char *domain = strchr(value, '@');
 
@@ -113,20 +168,14 @@ static void put_domain(char *value, VALUE hash) {
 
   domain++;
 
-  char *bracket = strchr(domain, '>');
-  VALUE v_value;
-
-  if (bracket == NULL) {
-    v_value = rb_str_new2(domain);
-  } else {
-    size_t len = bracket - domain;
-    v_value = rb_str_new(domain, len);
-  }
-
-  rb_hash_aset(hash, rb_str_new2("domain"), v_value);
+  rb_hash_aset(hash, rb_str_new2("domain"), rb_str_new2(domain));
 }
 
-static void put_status(char *value, VALUE hash) {
+static void put_status(char *value, VALUE hash, bool mask) {
+  if (mask) {
+    mask_email(value);
+  }
+
   char *detail = strchr(value, ' ');
 
   if (detail != NULL) {
@@ -138,7 +187,36 @@ static void put_status(char *value, VALUE hash) {
   rb_hash_aset(hash, rb_str_new2("status"), rb_str_new2(value));
 }
 
-static void put_attr(char *str, VALUE hash) {
+#ifdef HAVE_OPENSSL_SHA_H
+static void put_hash(char *email, VALUE hash_obj, char *salt, size_t salt_len) {
+  char buf[SHA512_DIGEST_LENGTH * 2 + 1];
+
+  if (!digest_sha512(email, salt, salt_len, buf)) {
+    return;
+  }
+
+  rb_hash_aset(hash_obj, rb_str_new2("hash"), rb_str_new2(buf));
+}
+#endif // HAVE_OPENSSL_SHA_H
+
+static void put_to(char *value, VALUE hash, bool mask, bool include_hash, char *salt, size_t salt_len) {
+  char *email = remove_bracket(value);
+
+#ifdef HAVE_OPENSSL_SHA_H
+  if (include_hash) {
+    put_hash(email, hash, salt, salt_len);
+  }
+#endif
+
+  if (mask) {
+    mask_email(value); // not "email"!
+  }
+
+  rb_hash_aset(hash, rb_str_new2("to"), rb_str_new2(email));
+  put_domain(value, hash);
+}
+
+static void put_attr(char *str, VALUE hash, bool mask, bool include_hash, char *salt, size_t salt_len) {
   char *value = strchr(str, '=');
 
   if (value == NULL) {
@@ -151,28 +229,23 @@ static void put_attr(char *str, VALUE hash) {
   VALUE v_key = rb_str_new2(str);
 
   if (strcmp(str, "delay") == 0) {
-    VALUE v_value = rb_float_new(atof(value));
-    rb_hash_aset(hash, v_key, v_value);
+    rb_hash_aset(hash, v_key, rb_float_new(atof(value)));
   } else if (strcmp(str, "conn_use") == 0) {
-    VALUE v_value = INT2NUM(atoi(value));
-    rb_hash_aset(hash, v_key, v_value);
+    rb_hash_aset(hash, v_key, INT2NUM(atoi(value)));
+  } else if (strcmp(str, "to") == 0) {
+    put_to(value, hash, mask, include_hash, salt, salt_len);
   } else if (strcmp(str, "status") == 0) {
-    put_status(value, hash);
+    put_status(value, hash, mask);
   } else {
-    VALUE v_value = rb_str_new2(value);
-    rb_hash_aset(hash, v_key, v_value);
-  }
+    if (mask) {
+      mask_email(value);
+    }
 
-  if (strcmp(str, "to") == 0) {
-    put_domain(value, hash);
+    rb_hash_aset(hash, v_key, rb_str_new2(value));
   }
 }
 
-static void split_line2(char *str, int mask, VALUE hash) {
-  if (mask) {
-    mask_email(str);
-  }
-
+static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, char *salt, size_t salt_len) {
   char *ptr;
 
   for (;;) {
@@ -190,25 +263,44 @@ static void split_line2(char *str, int mask, VALUE hash) {
       break;
     }
 
-    put_attr(ptr, hash);
+    put_attr(ptr, hash, mask, include_hash, salt, salt_len);
   }
 
   if (str) {
-    put_attr(str, hash);
+    put_attr(str, hash, mask, include_hash, salt, salt_len);
   }
 }
 
-static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask) {
+static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt) {
   Check_Type(v_str, T_STRING);
 
   char *str = RSTRING_PTR(v_str);
   size_t len = RSTRING_LEN(v_str);
-  int mask = 1;
+  bool mask = true;
+
+  bool include_hash = false;
+  char *salt = NULL;
+  size_t salt_len = -1;
+
+  if (!NIL_P(v_hash)) {
+#ifdef HAVE_OPENSSL_SHA_H
+    Check_Type(v_hash, T_TRUE);
+    include_hash = true;
+
+    if (!NIL_P(v_salt)) {
+      Check_Type(v_salt, T_STRING);
+      salt = RSTRING_PTR(v_salt);
+      salt_len = RSTRING_LEN(v_salt);
+    }
+#else
+    rb_raise(rb_eArgumentError, "OpenSSL is not linked");
+#endif // HAVE_OPENSSL_SHA_H
+  }
 
   switch (TYPE(v_mask)) {
   case T_FALSE:
   case T_NIL:
-    mask = 0;
+    mask = false;
   }
 
   if (len < 1) {
@@ -231,7 +323,7 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask)
   rb_hash_aset(hash, rb_str_new2("process"), rb_str_new2(process));
   rb_hash_aset(hash, rb_str_new2("queue_id"), rb_str_new2(queue_id));
 
-  split_line2(attrs, mask, hash);
+  split_line2(attrs, mask, hash, include_hash, salt, salt_len);
 
   return hash;
 }
@@ -239,5 +331,5 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask)
 void Init_postfix_status_line_core() {
   VALUE rb_mPostfixStatusLine = rb_define_module("PostfixStatusLine");
   VALUE rb_mPostfixStatusLineCore = rb_define_module_under(rb_mPostfixStatusLine, "Core");
-  rb_define_module_function(rb_mPostfixStatusLineCore, "parse", rb_postfix_status_line_parse, 2);
+  rb_define_module_function(rb_mPostfixStatusLineCore, "parse", rb_postfix_status_line_parse, 4);
 }
