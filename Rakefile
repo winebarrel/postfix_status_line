@@ -10,3 +10,4 @@ end
 
 task :default => [:spec]
 task :spec => [:compile]
+task :compile => [:clean]

@@ -96,7 +96,7 @@ static void mask_email(char *str) {
       }
 
       ptr = NULL;
-    } else if (*str == '<') {
+    } else if (*str == '<' || *str == '(' || *str == ' ' || *str == ',') {
       ptr = str + 1;
     }
 
