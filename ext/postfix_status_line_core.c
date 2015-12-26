@@ -153,6 +153,9 @@ static void put_attr(char *str, VALUE hash) {
   if (strcmp(str, "delay") == 0) {
     VALUE v_value = rb_float_new(atof(value));
     rb_hash_aset(hash, v_key, v_value);
+  } else if (strcmp(str, "conn_use") == 0) {
+    VALUE v_value = INT2NUM(atoi(value));
+    rb_hash_aset(hash, v_key, v_value);
   } else if (strcmp(str, "status") == 0) {
     put_status(value, hash);
   } else {
