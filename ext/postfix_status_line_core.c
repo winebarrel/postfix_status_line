@@ -282,9 +282,12 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask,
   char *salt = NULL;
   size_t salt_len = -1;
 
-  if (!NIL_P(v_hash)) {
+  switch (TYPE(v_hash)) {
+  case T_FALSE:
+  case T_NIL:
+    break;
+  default:
 #ifdef HAVE_OPENSSL_SHA_H
-    Check_Type(v_hash, T_TRUE);
     include_hash = true;
 
     if (!NIL_P(v_salt)) {
