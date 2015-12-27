@@ -293,10 +293,6 @@ static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, cha
   }
 }
 
-static void put_time_as_str(char *tm, VALUE hash) {
-  rb_hash_aset(hash, rb_str_new2("time"), rb_str_new2(tm));
-}
-
 static int get_year() {
   time_t now = time(NULL);
 
@@ -313,37 +309,30 @@ static int get_year() {
   return t->tm_year;
 }
 
-static void put_time(char *time_str, VALUE hash, bool parse_time) {
-  if (parse_time) {
-    time_t ts;
-    struct tm parsed;
+static void put_epoch(char *time_str, VALUE hash) {
+  time_t ts;
+  struct tm parsed;
 
-    if (strptime(time_str, "%b %d %H:%M:%S", &parsed) == NULL) {
-      put_time_as_str(time_str, hash);
-      return;
-    }
-
-    int this_year = get_year();
-
-    if (this_year == -1) {
-      put_time_as_str(time_str, hash);
-      return;
-    }
-
-    parsed.tm_year = this_year;
-    parsed.tm_isdst = 0;
-
-    ts = mktime(&parsed);
-
-    if (ts == -1) {
-      put_time_as_str(time_str, hash);
-      return;
-    }
-
-    rb_hash_aset(hash, rb_str_new2("time"), LONG2NUM(ts));
-  } else {
-    put_time_as_str(time_str, hash);
+  if (strptime(time_str, "%b %d %H:%M:%S", &parsed) == NULL) {
+    return;
   }
+
+  int this_year = get_year();
+
+  if (this_year == -1) {
+    return;
+  }
+
+  parsed.tm_year = this_year;
+  parsed.tm_isdst = 0;
+
+  ts = mktime(&parsed);
+
+  if (ts == -1) {
+    return;
+  }
+
+  rb_hash_aset(hash, rb_str_new2("epoch"), LONG2NUM(ts));
 }
 
 static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time) {
@@ -388,10 +377,14 @@ if (rb_value_to_bool(v_hash)) {
   }
 
   VALUE hash = rb_hash_new();
-  put_time(tm, hash, parse_time);
+  rb_hash_aset(hash, rb_str_new2("time"), rb_str_new2(tm));
   rb_hash_aset(hash, rb_str_new2("hostname"), rb_str_new2(hostname));
   rb_hash_aset(hash, rb_str_new2("process"), rb_str_new2(process));
   rb_hash_aset(hash, rb_str_new2("queue_id"), rb_str_new2(queue_id));
+
+  if (parse_time) {
+    put_epoch(tm, hash);
+  }
 
   split_line2(attrs, mask, hash, include_hash, salt, salt_len);
 
