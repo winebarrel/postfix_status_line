@@ -205,7 +205,7 @@ describe PostfixStatusLine do
         "status_detail" => "(250 ok ; id=20120227140036M0700qer4ne)",
         "relay" => "gateway-f1.isp.att.net[204.127.217.16]:25",
         "status" => "sent",
-        "time" => 1424995357,
+        "time" => 1425027757,
         "to" => "*******@bellsouth.net",
       })
     end
