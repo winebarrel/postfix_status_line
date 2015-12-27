@@ -51,6 +51,12 @@ PostfixStatusLine.parse(status_line)
 PostfixStatusLine.parse(status_line, hash: true)
 ```
 
+### Parse time
+
+```ruby
+PostfixStatusLine.parse(status_line, parse_time: true)
+```
+
 ## Benchmark (on EC2/t2.micro)
 
 ### Script
