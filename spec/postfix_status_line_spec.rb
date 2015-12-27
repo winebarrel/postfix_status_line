@@ -183,4 +183,32 @@ describe PostfixStatusLine do
     end
   end
 
+  context 'when parse time' do
+    let(:status_line) do
+     'Feb 27 09:02:37 MyHOSTNAME postfix/smtp[26490]: D53A72713E5: to=<myemail@bellsouth.net>, relay=gateway-f1.isp.att.net[204.127.217.16]:25, conn_use=2, delay=0.57, delays=0.11/0.03/0.23/0.19, dsn=2.0.0, status=sent (250 ok ; id=20120227140036M0700qer4ne)'
+    end
+
+    let(:options) do
+      {parse_time: true}
+    end
+
+    it do
+      is_expected.to eq({
+        "conn_use" => 2,
+        "delay" => 0.57,
+        "delays" => "0.11/0.03/0.23/0.19",
+        "domain" => "bellsouth.net",
+        "dsn" => "2.0.0",
+        "hostname" => "MyHOSTNAME",
+        "process" => "postfix/smtp[26490]",
+        "queue_id" => "D53A72713E5",
+        "status_detail" => "(250 ok ; id=20120227140036M0700qer4ne)",
+        "relay" => "gateway-f1.isp.att.net[204.127.217.16]:25",
+        "status" => "sent",
+        "time" => "Feb 27 09:02:37",
+        "epoch" => 1425027757,
+        "to" => "*******@bellsouth.net",
+      })
+    end
+  end
 end
