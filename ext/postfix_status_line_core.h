@@ -2,6 +2,7 @@
 #define __POSTFIX_STATUS_LINE_CORE_H__
 
 #include <stdbool.h>
+#include <time.h>
 
 #ifdef HAVE_OPENSSL_SHA_H
 #include <openssl/sha.h>
