@@ -8,3 +8,6 @@ before_script:
 script:
   - bundle install
   - bundle exec rake
+env:
+  - DISABLE_OPENSSL=0
+  - DISABLE_OPENSSL=1
