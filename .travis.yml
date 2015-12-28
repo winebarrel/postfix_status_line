@@ -3,11 +3,6 @@ rvm:
   - 2.0.0
   - 2.1
   - 2.2
-before_script:
-  - [ "$DISABLE_OPENSSL" = "1" ] && sudo apt-get remove -y libssl-dev
 script:
   - bundle install
   - bundle exec rake
-env:
-  - DISABLE_OPENSSL=0
-  - DISABLE_OPENSSL=1
