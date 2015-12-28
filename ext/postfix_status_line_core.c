@@ -362,7 +362,7 @@ if (rb_value_to_bool(v_hash)) {
       salt_len = RSTRING_LEN(v_salt);
     }
 #else
-    rb_raise(rb_eArgumentError, "OpenSSL is not linked");
+    rb_raise(rb_eArgError, "OpenSSL is not linked");
 #endif // HAVE_OPENSSL_SHA_H
   }
 
