@@ -186,7 +186,17 @@ static void put_status(char *value, VALUE hash, bool mask) {
     mask_email(value);
   }
 
-  char *detail = strchr(value, ' ');
+  char *detail = NULL;
+  char *detail1 = strchr(value, ' ');
+  char *detail2 = strchr(value, ',');
+
+  if (detail1 != NULL && detail2 != NULL) {
+    detail = detail1 < detail2 ? detail1 : detail2;
+  } else if (detail1 != NULL && detail2 == NULL) {
+    detail = detail1;
+  } else if (detail1 == NULL && detail2 != NULL) {
+    detail = detail2;
+  }
 
   if (detail != NULL) {
     *detail = '\0';
@@ -273,19 +283,15 @@ static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, cha
   for (;;) {
     ptr = split(&str, ", ", 2);
 
-    // status detail includes ", "
-    if (strchr(str, '=') == NULL) {
-      *(str - 1) = ' ';
-      *(str - 2) = ' ';
-      str = ptr;
-      break;
-    }
-
     if (ptr == NULL) {
       break;
     }
 
     put_attr(ptr, hash, mask, include_hash, salt, salt_len);
+
+    if (strncmp(str, "status=", 7) == 0) {
+      break;
+    }
   }
 
   if (str) {
