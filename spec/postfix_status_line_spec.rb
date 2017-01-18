@@ -148,7 +148,7 @@ describe PostfixStatusLine do
         "relay" => "gateway-f1.isp.att.net[204.127.217.16]:25",
         "status" => "sent",
         "time" => "Feb 27 09:02:37",
-        "epoch" => 1425027757,
+        "epoch" => Time.parse('02/27 09:02:37 +0000').to_i,
         "to" => "*******@bellsouth.net",
       })
     end
