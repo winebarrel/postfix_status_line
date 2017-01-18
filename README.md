@@ -51,6 +51,12 @@ PostfixStatusLine.parse(status_line)
 PostfixStatusLine.parse(status_line, hash: true)
 ```
 
+### Specify SHA algorithm
+
+```ruby
+PostfixStatusLine.parse(status_line, hash: true, sha_algorithm: 256)
+```
+
 ### Parse time
 
 ```ruby

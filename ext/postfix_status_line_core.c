@@ -1,40 +1,13 @@
 #include "postfix_status_line_core.h"
 
 #ifdef HAVE_OPENSSL_SHA_H
-static void sha512_to_str(unsigned char *hash, char buf[]) {
-  int i;
 
-  for (i = 0; i < SHA512_DIGEST_LENGTH; i++) {
-    snprintf(buf + (i * 2), 3, "%02x", hash[i]);
-  }
-}
+DEFINE_SHA_FUNCTIONS(); // SHA1
+DEFINE_SHA_FUNCTIONS(224);
+DEFINE_SHA_FUNCTIONS(256);
+DEFINE_SHA_FUNCTIONS(384);
+DEFINE_SHA_FUNCTIONS(512);
 
-static bool digest_sha512(char *str, char *salt, size_t salt_len, char buf[]) {
-  SHA512_CTX ctx;
-  unsigned char hash[SHA512_DIGEST_LENGTH];
-
-  if (SHA512_Init(&ctx) != 1) {
-    return false;
-  }
-
-  if (SHA512_Update(&ctx, str, strlen(str)) != 1) {
-    return false;
-  }
-
-  if (salt != NULL) {
-    if (SHA512_Update(&ctx, salt, salt_len) != 1) {
-      return false;
-    }
-  }
-
-  if (SHA512_Final(hash, &ctx) != 1) {
-    return false;
-  }
-
-  sha512_to_str(hash, buf);
-
-  return true;
-}
 #endif // HAVE_OPENSSL_SHA_H
 
 static bool rb_value_to_bool(VALUE v_value) {
@@ -208,10 +181,11 @@ static void put_status(char *value, VALUE hash, bool mask) {
 }
 
 #ifdef HAVE_OPENSSL_SHA_H
-static void put_hash(char *email, VALUE hash_obj, char *salt, size_t salt_len) {
+static void put_hash(char *email, VALUE hash_obj, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
+  // XXX: allocate a buffer of sufficient size
   char buf[SHA512_DIGEST_LENGTH * 2 + 1];
 
-  if (!digest_sha512(email, salt, salt_len, buf)) {
+  if (!digest_sha_func(email, salt, salt_len, buf)) {
     return;
   }
 
@@ -219,12 +193,12 @@ static void put_hash(char *email, VALUE hash_obj, char *salt, size_t salt_len) {
 }
 #endif // HAVE_OPENSSL_SHA_H
 
-static void put_to(char *value, VALUE hash, bool mask, bool include_hash, char *salt, size_t salt_len) {
+static void put_to(char *value, VALUE hash, bool mask, bool include_hash, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
   char *email = remove_bracket(value);
 
 #ifdef HAVE_OPENSSL_SHA_H
   if (include_hash) {
-    put_hash(email, hash, salt, salt_len);
+    put_hash(email, hash, salt, salt_len, digest_sha_func);
   }
 #endif
 
@@ -246,7 +220,7 @@ static void put_from(char *value, VALUE hash, bool mask) {
   rb_hash_aset(hash, rb_str_new2("from"), rb_str_new2(email));
 }
 
-static void put_attr(char *str, VALUE hash, bool mask, bool include_hash, char *salt, size_t salt_len) {
+static void put_attr(char *str, VALUE hash, bool mask, bool include_hash, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
   char *value = strchr(str, '=');
 
   if (value == NULL) {
@@ -263,7 +237,7 @@ static void put_attr(char *str, VALUE hash, bool mask, bool include_hash, char *
   } else if (strcmp(str, "conn_use") == 0) {
     rb_hash_aset(hash, v_key, INT2NUM(atoi(value)));
   } else if (strcmp(str, "to") == 0) {
-    put_to(value, hash, mask, include_hash, salt, salt_len);
+    put_to(value, hash, mask, include_hash, salt, salt_len, digest_sha_func);
   } else if (strcmp(str, "from") == 0) {
     put_from(value, hash, mask);
   } else if (strcmp(str, "status") == 0) {
@@ -277,7 +251,7 @@ static void put_attr(char *str, VALUE hash, bool mask, bool include_hash, char *
   }
 }
 
-static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, char *salt, size_t salt_len) {
+static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
   char *ptr;
 
   for (;;) {
@@ -287,7 +261,7 @@ static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, cha
       break;
     }
 
-    put_attr(ptr, hash, mask, include_hash, salt, salt_len);
+    put_attr(ptr, hash, mask, include_hash, salt, salt_len, digest_sha_func);
 
     if (strncmp(str, "status=", 7) == 0) {
       break;
@@ -295,7 +269,7 @@ static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, cha
   }
 
   if (str) {
-    put_attr(str, hash, mask, include_hash, salt, salt_len);
+    put_attr(str, hash, mask, include_hash, salt, salt_len, digest_sha_func);
   }
 }
 
@@ -341,7 +315,7 @@ static void put_epoch(char *time_str, VALUE hash) {
   rb_hash_aset(hash, rb_str_new2("epoch"), LONG2NUM(ts));
 }
 
-static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time) {
+static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time, VALUE v_sha_algo) {
   Check_Type(v_str, T_STRING);
 
   char *str = RSTRING_PTR(v_str);
@@ -358,7 +332,7 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask,
   char *salt = NULL;
   size_t salt_len = -1;
 
-if (rb_value_to_bool(v_hash)) {
+  if (rb_value_to_bool(v_hash)) {
 #ifdef HAVE_OPENSSL_SHA_H
     include_hash = true;
 
@@ -371,6 +345,40 @@ if (rb_value_to_bool(v_hash)) {
     rb_raise(rb_eArgError, "OpenSSL is not linked");
 #endif // HAVE_OPENSSL_SHA_H
   }
+
+  int sha_algo = 512;
+
+  if (!NIL_P(v_sha_algo)) {
+#ifdef HAVE_OPENSSL_SHA_H
+    sha_algo = NUM2INT(v_sha_algo);
+#else
+    rb_raise(rb_eArgError, "OpenSSL is not linked");
+#endif // HAVE_OPENSSL_SHA_H
+  }
+
+  DIGEST_SHA digest_sha_func = NULL;
+
+#ifdef HAVE_OPENSSL_SHA_H
+  switch (sha_algo) {
+    case 1:
+      digest_sha_func = digest_sha;
+      break;
+    case 224:
+      digest_sha_func = digest_sha224;
+      break;
+    case 256:
+      digest_sha_func = digest_sha256;
+      break;
+    case 384:
+      digest_sha_func = digest_sha384;
+      break;
+    case 512:
+      digest_sha_func = digest_sha512;
+      break;
+    default:
+      rb_raise(rb_eArgError, "Invalid SHA algorithm");
+  }
+#endif // HAVE_OPENSSL_SHA_H
 
   char buf[len + 1];
   strncpy(buf, str, len);
@@ -392,7 +400,7 @@ if (rb_value_to_bool(v_hash)) {
     put_epoch(tm, hash);
   }
 
-  split_line2(attrs, mask, hash, include_hash, salt, salt_len);
+  split_line2(attrs, mask, hash, include_hash, salt, salt_len, digest_sha_func);
 
   return hash;
 }
@@ -400,5 +408,5 @@ if (rb_value_to_bool(v_hash)) {
 void Init_postfix_status_line_core() {
   VALUE rb_mPostfixStatusLine = rb_define_module("PostfixStatusLine");
   VALUE rb_mPostfixStatusLineCore = rb_define_module_under(rb_mPostfixStatusLine, "Core");
-  rb_define_module_function(rb_mPostfixStatusLineCore, "parse", rb_postfix_status_line_parse, 5);
+  rb_define_module_function(rb_mPostfixStatusLineCore, "parse", rb_postfix_status_line_parse, 6);
 }
