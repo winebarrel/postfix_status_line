@@ -2,7 +2,7 @@
 
 #ifdef HAVE_OPENSSL_SHA_H
 
-DEFINE_SHA_FUNCTIONS(); // SHA1
+DEFINE_SHA_FUNCTIONS(1);
 DEFINE_SHA_FUNCTIONS(224);
 DEFINE_SHA_FUNCTIONS(256);
 DEFINE_SHA_FUNCTIONS(384);
@@ -361,7 +361,7 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask,
 #ifdef HAVE_OPENSSL_SHA_H
   switch (sha_algo) {
     case 1:
-      digest_sha_func = digest_sha;
+      digest_sha_func = digest_sha1;
       break;
     case 224:
       digest_sha_func = digest_sha224;

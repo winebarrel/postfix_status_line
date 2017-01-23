@@ -1,6 +1,14 @@
 #ifndef __DIGEST_SHA_H__
 #define __DIGEST_SHA_H__
 
+#ifndef SHA1_CTX
+#define SHA1_CTX SHA_CTX
+#endif
+
+#ifndef SHA1_DIGEST_LENGTH
+#define SHA1_DIGEST_LENGTH SHA_DIGEST_LENGTH
+#endif
+
 #ifndef SHA224_CTX
 #define SHA224_CTX SHA256_CTX
 #endif
