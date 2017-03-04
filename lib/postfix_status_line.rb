@@ -13,4 +13,14 @@ module PostfixStatusLine
     PostfixStatusLine::Core.parse(str, mask, hash, salt, parse_time, sha_algo)
   end
   module_function :parse
+
+  def parse_header_checks_warning(str, options = {})
+    mask = options.has_key?(:mask) ? options[:mask] : true
+    hash = options[:hash]
+    salt = options[:salt]
+    parse_time = options[:parse_time]
+    sha_algo = options[:sha_algorithm]
+    PostfixStatusLine::Core.parse_header_checks_warning(str, mask, hash, salt, parse_time, sha_algo)
+  end
+  module_function :parse_header_checks_warning
 end

@@ -273,6 +273,53 @@ static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, cha
   }
 }
 
+static void put_header(char *str, VALUE hash, bool mask) {
+  if (strncmp(str, "warning: header ", 16) != 0) {
+    return;
+  }
+
+  str += 16;
+  char *value = strchr(str, ':');
+
+  if (value == NULL || *(value + 1) == '\0') {
+    return;
+  }
+
+  if (mask) {
+    mask_email(value);
+  }
+
+  *value = '\0';
+  value += 2;
+
+  VALUE v_key = rb_str_new2(str);
+  VALUE v_value = rb_str_new2(value);
+  rb_hash_aset(hash, v_key, v_value);
+}
+
+static void split_line3(char *str, bool mask, VALUE hash, bool include_hash, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
+  char *ptr = str;
+  size_t len = strlen(str);
+  bool to_found = false;
+  bool from_found = false;
+
+  for (int i = len - 1; i >= 0; i--) {
+    if (ptr[i] == ' ') {
+      char *chunk = ptr + i + 1;
+
+      if (strncmp(chunk, "to=", 3) == 0) {
+        put_attr(chunk, hash, mask, include_hash, salt, salt_len, digest_sha_func);
+        ptr[i] = '\0';
+      } else if (strncmp(chunk, "from=", 5) == 0) {
+        put_attr(chunk, hash, mask, include_hash, salt, salt_len, digest_sha_func);
+        ptr[i] = '\0';
+        put_header(ptr, hash, mask);
+        break;
+      }
+    }
+  }
+}
+
 static int get_year() {
   time_t now = time(NULL);
 
@@ -315,78 +362,82 @@ static void put_epoch(char *time_str, VALUE hash) {
   rb_hash_aset(hash, rb_str_new2("epoch"), LONG2NUM(ts));
 }
 
-static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time, VALUE v_sha_algo) {
+static bool parse_init(
+  VALUE v_str, VALUE v_mask, VALUE v_parse_time, VALUE v_hash, VALUE v_salt, VALUE v_sha_algo,
+  char **str, size_t *len, bool *mask, bool *parse_time, bool *include_hash, char **salt, size_t *salt_len, int *sha_algo, DIGEST_SHA *digest_sha_func) {
   Check_Type(v_str, T_STRING);
+  *str = RSTRING_PTR(v_str);
+  *len = RSTRING_LEN(v_str);
 
-  char *str = RSTRING_PTR(v_str);
-  size_t len = RSTRING_LEN(v_str);
-
-  if (len < 1) {
-    return Qnil;
+  if (*len < 1) {
+    return false;
   }
 
-  bool mask = rb_value_to_bool(v_mask);
-  bool parse_time = rb_value_to_bool(v_parse_time);
+  *mask = rb_value_to_bool(v_mask);
+  *parse_time = rb_value_to_bool(v_parse_time);
 
-  bool include_hash = false;
-  char *salt = NULL;
-  size_t salt_len = -1;
+  *include_hash = false;
+  *salt = NULL;
+  *salt_len = -1;
 
   if (rb_value_to_bool(v_hash)) {
 #ifdef HAVE_OPENSSL_SHA_H
-    include_hash = true;
+    *include_hash = true;
 
     if (!NIL_P(v_salt)) {
       Check_Type(v_salt, T_STRING);
-      salt = RSTRING_PTR(v_salt);
-      salt_len = RSTRING_LEN(v_salt);
+      *salt = RSTRING_PTR(v_salt);
+      *salt_len = RSTRING_LEN(v_salt);
     }
 #else
     rb_raise(rb_eArgError, "OpenSSL is not linked");
 #endif // HAVE_OPENSSL_SHA_H
   }
 
-  int sha_algo = 512;
+  *sha_algo = 512;
 
   if (!NIL_P(v_sha_algo)) {
 #ifdef HAVE_OPENSSL_SHA_H
-    sha_algo = NUM2INT(v_sha_algo);
+    *sha_algo = NUM2INT(v_sha_algo);
 #else
     rb_raise(rb_eArgError, "OpenSSL is not linked");
 #endif // HAVE_OPENSSL_SHA_H
   }
 
-  DIGEST_SHA digest_sha_func = NULL;
+  *digest_sha_func = NULL;
 
 #ifdef HAVE_OPENSSL_SHA_H
-  switch (sha_algo) {
+  switch (*sha_algo) {
     case 1:
-      digest_sha_func = digest_sha1;
+      *digest_sha_func = digest_sha1;
       break;
     case 224:
-      digest_sha_func = digest_sha224;
+      *digest_sha_func = digest_sha224;
       break;
     case 256:
-      digest_sha_func = digest_sha256;
+      *digest_sha_func = digest_sha256;
       break;
     case 384:
-      digest_sha_func = digest_sha384;
+      *digest_sha_func = digest_sha384;
       break;
     case 512:
-      digest_sha_func = digest_sha512;
+      *digest_sha_func = digest_sha512;
       break;
     default:
       rb_raise(rb_eArgError, "Invalid SHA algorithm");
   }
 #endif // HAVE_OPENSSL_SHA_H
 
-  char buf[len + 1];
+  return true;
+}
+
+static VALUE pre_parse(char *str, int len, char *buf, bool parse_time, char **attrs) {
   strncpy(buf, str, len);
   buf[len] = '\0';
 
-  char *tm, *hostname, *process, *queue_id, *attrs;
+  char *tm, *hostname, *process, *queue_id;
 
-  if (!split_line1(buf, &tm, &hostname, &process, &queue_id, &attrs)) {
+  if (!split_line1(buf, &tm, &hostname, &process, &queue_id, attrs)) {
     return Qnil;
   }
 
@@ -400,7 +451,65 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask,
     put_epoch(tm, hash);
   }
 
+  return hash;
+}
+
+static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time, VALUE v_sha_algo) {
+  char *str;
+  size_t len;
+  bool mask;
+  bool parse_time;
+  bool include_hash;
+  char *salt;
+  size_t salt_len;
+  int sha_algo;
+  DIGEST_SHA digest_sha_func;
+
+  if (!parse_init(v_str, v_mask, v_parse_time, v_hash, v_salt, v_sha_algo,
+                  &str, &len, &mask, &parse_time, &include_hash, &salt, &salt_len, &sha_algo, &digest_sha_func)) {
+    return Qnil;
+  }
+
+  char buf[len + 1];
+  char *attrs;
+
+  VALUE hash = pre_parse(str, len, buf, parse_time, &attrs);
+
+  if (NIL_P(hash)) {
+    return Qnil;
+  }
+
   split_line2(attrs, mask, hash, include_hash, salt, salt_len, digest_sha_func);
+
+  return hash;
+}
+
+static VALUE rb_postfix_status_line_parse_header_checks_warning(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time, VALUE v_sha_algo) {
+  char *str;
+  size_t len;
+  bool mask;
+  bool parse_time;
+  bool include_hash;
+  char *salt;
+  size_t salt_len;
+  int sha_algo;
+  DIGEST_SHA digest_sha_func;
+
+  if (!parse_init(v_str, v_mask, v_parse_time, v_hash, v_salt, v_sha_algo,
+                  &str, &len, &mask, &parse_time, &include_hash, &salt, &salt_len, &sha_algo, &digest_sha_func)) {
+    return Qnil;
+  }
+
+  char buf[len + 1];
+  char *attrs;
+
+  VALUE hash = pre_parse(str, len, buf, parse_time, &attrs);
+
+  if (NIL_P(hash)) {
+    return Qnil;
+  }
+
+  split_line3(attrs, mask, hash, include_hash, salt, salt_len, digest_sha_func);
 
   return hash;
 }
@@ -409,4 +518,5 @@ void Init_postfix_status_line_core() {
   VALUE rb_mPostfixStatusLine = rb_define_module("PostfixStatusLine");
   VALUE rb_mPostfixStatusLineCore = rb_define_module_under(rb_mPostfixStatusLine, "Core");
   rb_define_module_function(rb_mPostfixStatusLineCore, "parse", rb_postfix_status_line_parse, 6);
+  rb_define_module_function(rb_mPostfixStatusLineCore, "parse_header_checks_warning", rb_postfix_status_line_parse_header_checks_warning, 6);
 }
