@@ -300,8 +300,6 @@ static void put_header(char *str, VALUE hash, bool mask) {
 static void split_line3(char *str, bool mask, VALUE hash, bool include_hash, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
   char *ptr = str;
   size_t len = strlen(str);
-  bool to_found = false;
-  bool from_found = false;
 
   for (int i = len - 1; i >= 0; i--) {
     if (ptr[i] == ' ') {
