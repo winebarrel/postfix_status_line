@@ -301,7 +301,7 @@ static void split_line3(char *str, bool mask, VALUE hash, bool include_hash, cha
   char *ptr = str;
   size_t len = strlen(str);
 
-  for (int i = len - 1; i >= 0; i--) {
+  for (int i = (int) len - 1; i >= 0; i--) {
     if (ptr[i] == ' ') {
       char *chunk = ptr + i + 1;
 
@@ -429,7 +429,7 @@ static bool parse_init(
   return true;
 }
 
-static VALUE pre_parse(char *str, int len, char *buf, bool parse_time, char **attrs) {
+static VALUE pre_parse(char *str, size_t len, char *buf, bool parse_time, char **attrs) {
   strncpy(buf, str, len);
   buf[len] = '\0';
 
