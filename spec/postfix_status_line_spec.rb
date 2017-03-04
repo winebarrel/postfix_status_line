@@ -177,4 +177,24 @@ describe PostfixStatusLine do
       })
     end
   end
+
+  context 'when empty line' do
+    let(:status_line) do
+      ''
+    end
+
+    it do
+      is_expected.to be_nil
+    end
+  end
+
+  context 'when invalid line' do
+    let(:status_line) do
+      ':'
+    end
+
+    it do
+      is_expected.to be_nil
+    end
+  end
 end
