@@ -5,10 +5,10 @@ describe PostfixStatusLine do
     {mask: true}
   end
 
-  subject { PostfixStatusLine.parse_header_checks_warning(header_checks_warning, options) }
+  subject { PostfixStatusLine.parse_header_checks(header_checks_line, options) }
 
   context 'with mask' do
-    let(:header_checks_warning) do
+    let(:header_checks_line) do
       'Mar  4 14:44:19 P788 postfix/cleanup[7426]: E80A9DF6F7E: warning: header To: sgwr_dts@yahoo.co.jp from local; from=<sugawara@P788.local> to=<sgwr_dts@yahoo.co.jp>'
     end
 
@@ -27,7 +27,7 @@ describe PostfixStatusLine do
   end
 
   context 'without mask' do
-    let(:header_checks_warning) do
+    let(:header_checks_line) do
       'Mar  4 14:44:19 P788 postfix/cleanup[7426]: E80A9DF6F7E: warning: header To: sgwr_dts@yahoo.co.jp from local; from=<sugawara@P788.local> to=<sgwr_dts@yahoo.co.jp>'
     end
 
@@ -51,7 +51,7 @@ describe PostfixStatusLine do
 
 
   context 'when parse_time' do
-    let(:header_checks_warning) do
+    let(:header_checks_line) do
       'Mar  4 14:44:19 P788 postfix/cleanup[7426]: E80A9DF6F7E: warning: header To: sgwr_dts@yahoo.co.jp from local; from=<sugawara@P788.local> to=<sgwr_dts@yahoo.co.jp>'
     end
 
@@ -75,7 +75,7 @@ describe PostfixStatusLine do
   end
 
   context 'when empty line' do
-    let(:header_checks_warning) do
+    let(:header_checks_line) do
       ''
     end
 
@@ -85,7 +85,7 @@ describe PostfixStatusLine do
   end
 
   context 'when invalid line' do
-    let(:header_checks_warning) do
+    let(:header_checks_line) do
       ':'
     end
 
@@ -96,7 +96,7 @@ describe PostfixStatusLine do
 
   if ENV['DISABLE_OPENSSL'] != '1'
     context 'with hash' do
-      let(:header_checks_warning) do
+      let(:header_checks_line) do
         'Mar  4 14:44:19 P788 postfix/cleanup[7426]: E80A9DF6F7E: warning: header To: sgwr_dts@yahoo.co.jp from local; from=<sugawara@P788.local> to=<sgwr_dts@yahoo.co.jp>'
       end
 

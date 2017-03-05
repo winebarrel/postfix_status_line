@@ -483,7 +483,7 @@ static VALUE rb_postfix_status_line_parse(VALUE self, VALUE v_str, VALUE v_mask,
   return hash;
 }
 
-static VALUE rb_postfix_status_line_parse_header_checks_warning(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time, VALUE v_sha_algo) {
+static VALUE rb_postfix_status_line_parse_header_checks(VALUE self, VALUE v_str, VALUE v_mask, VALUE v_hash, VALUE v_salt, VALUE v_parse_time, VALUE v_sha_algo) {
   char *str;
   size_t len;
   bool mask;
@@ -517,5 +517,5 @@ void Init_postfix_status_line_core() {
   VALUE rb_mPostfixStatusLine = rb_define_module("PostfixStatusLine");
   VALUE rb_mPostfixStatusLineCore = rb_define_module_under(rb_mPostfixStatusLine, "Core");
   rb_define_module_function(rb_mPostfixStatusLineCore, "parse", rb_postfix_status_line_parse, 6);
-  rb_define_module_function(rb_mPostfixStatusLineCore, "parse_header_checks_warning", rb_postfix_status_line_parse_header_checks_warning, 6);
+  rb_define_module_function(rb_mPostfixStatusLineCore, "parse_header_checks", rb_postfix_status_line_parse_header_checks, 6);
 }
