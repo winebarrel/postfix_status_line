@@ -278,24 +278,24 @@ static void put_header(char *str, size_t len, VALUE hash, bool mask) {
     return;
   }
 
-  char *without_cmd = strchr(str, ':');
+  char *without_priority = strchr(str, ':');
 
-  if (without_cmd == NULL) {
+  if (without_priority == NULL) {
     return;
   }
 
-  if (strncmp(without_cmd, ": header ", 9) != 0) {
+  if (strncmp(without_priority, ": header ", 9) != 0) {
     return;
   }
 
-  char *value = strchr(without_cmd + 9, ':');
+  char *value = strchr(without_priority + 9, ':');
 
   if (value == NULL || *(value + 1) == '\0') {
     return;
   }
 
-  *without_cmd = '\0';
-  without_cmd += 9;
+  *without_priority = '\0';
+  without_priority += 9;
 
   int i;
 
@@ -320,7 +320,7 @@ static void put_header(char *str, size_t len, VALUE hash, bool mask) {
   value += 2;
 
   rb_hash_aset(hash, rb_str_new2("priority"), rb_str_new2(str));
-  rb_hash_aset(hash, rb_str_new2(without_cmd), rb_str_new2(value));
+  rb_hash_aset(hash, rb_str_new2(without_priority), rb_str_new2(value));
 }
 
 static void split_line3(char *str, bool mask, VALUE hash, bool include_hash, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
