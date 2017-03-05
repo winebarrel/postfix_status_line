@@ -63,9 +63,7 @@ PostfixStatusLine.parse(status_line, hash: true, sha_algorithm: 256)
 PostfixStatusLine.parse(status_line, parse_time: true)
 ```
 
-### Parse Header Checks Warning
-
-see http://www.postfix.org/header_checks.5.html
+### Parse [header_checks](http://www.postfix.org/header_checks.5.html) warning
 
 ```ruby
 warning = "Mar  4 14:44:19 P788 postfix/cleanup[7426]: E80A9DF6F7E: warning: header Subject: test from local; from=<sugawara@P788.local> to=<sgwr_dts@yahoo.co.jp>"
