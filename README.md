@@ -78,6 +78,7 @@ PostfixStatusLine.parse_header_checks_warning(warning)
 #      "domain"=>"yahoo.co.jp",
 #      "from"=>"********@P788.local",
 #      "header_from"=>"local",
+#      "priority"=>"warning",
 #      "Subject"=>"test"
 #    }
 ```
