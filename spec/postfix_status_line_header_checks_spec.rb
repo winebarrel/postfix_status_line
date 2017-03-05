@@ -14,10 +14,12 @@ describe PostfixStatusLine do
 
     it do
       is_expected.to eq({
-        "To" => "********@yahoo.co.jp from local;",
+        "To" => "********@yahoo.co.jp",
         "domain" => "yahoo.co.jp",
         "from" => "********@P788.local",
+        "header_from" => "local",
         "hostname" => "P788",
+        "priority" => "warning",
         "process" => "postfix/cleanup[7426]",
         "queue_id" => "E80A9DF6F7E",
         "time" => "Mar  4 14:44:19",
@@ -37,10 +39,12 @@ describe PostfixStatusLine do
 
     it do
       is_expected.to eq({
-        "To" => "sgwr_dts@yahoo.co.jp from local;",
+        "To" => "sgwr_dts@yahoo.co.jp",
         "domain" => "yahoo.co.jp",
         "from" => "sugawara@P788.local",
+        "header_from" => "local",
         "hostname" => "P788",
+        "priority" => "warning",
         "process" => "postfix/cleanup[7426]",
         "queue_id" => "E80A9DF6F7E",
         "time" => "Mar  4 14:44:19",
@@ -61,10 +65,12 @@ describe PostfixStatusLine do
 
     it do
       is_expected.to eq({
-        "To" => "********@yahoo.co.jp from local;",
+        "To" => "********@yahoo.co.jp",
         "domain" => "yahoo.co.jp",
         "from" => "********@P788.local",
+        "header_from" => "local",
         "hostname" => "P788",
+        "priority" => "warning",
         "process" => "postfix/cleanup[7426]",
         "queue_id" => "E80A9DF6F7E",
         "time" => "Mar  4 14:44:19",
@@ -106,11 +112,13 @@ describe PostfixStatusLine do
 
       it do
         is_expected.to eq({
-          "To" => "********@yahoo.co.jp from local;",
+          "To" => "********@yahoo.co.jp",
           "domain" => "yahoo.co.jp",
           "from" => "********@P788.local",
           "hash" => "78dc8eaeea2b209e250ebf90191ab3cd998d65d9093ecaeaccef300052825b202bd07fb12e0d31edcfbb4d7d560d7aa1377e71eb73e39b343b8aaf064d081e18",
+          "header_from" => "local",
           "hostname" => "P788",
+          "priority" => "warning",
           "process" => "postfix/cleanup[7426]",
           "queue_id" => "E80A9DF6F7E",
           "time" => "Mar  4 14:44:19",

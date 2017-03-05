@@ -273,16 +273,43 @@ static void split_line2(char *str, bool mask, VALUE hash, bool include_hash, cha
   }
 }
 
-static void put_header(char *str, VALUE hash, bool mask) {
-  if (strncmp(str, "warning: header ", 16) != 0) {
+static void put_header(char *str, size_t len, VALUE hash, bool mask) {
+  if (str[len - 1] != ';') {
     return;
   }
 
-  str += 16;
-  char *value = strchr(str, ':');
+  char *without_cmd = strchr(str, ':');
+
+  if (without_cmd == NULL) {
+    return;
+  }
+
+  if (strncmp(without_cmd, ": header ", 9) != 0) {
+    return;
+  }
+
+  char *value = strchr(without_cmd + 9, ':');
 
   if (value == NULL || *(value + 1) == '\0') {
     return;
+  }
+
+  *without_cmd = '\0';
+  without_cmd += 9;
+
+  int i;
+
+  for (i = (int) len - 2; i >= 0; i--) {
+    if (str[i] == ' ') {
+      char *chunk = str + i + 1;
+
+      if (strncmp(chunk, "from ", 5) == 0) {
+        str[len - 1] = '\0';
+        rb_hash_aset(hash, rb_str_new2("header_from"), rb_str_new2(chunk + 5));
+        str[i] = '\0';
+        break;
+      }
+    }
   }
 
   if (mask) {
@@ -292,9 +319,8 @@ static void put_header(char *str, VALUE hash, bool mask) {
   *value = '\0';
   value += 2;
 
-  VALUE v_key = rb_str_new2(str);
-  VALUE v_value = rb_str_new2(value);
-  rb_hash_aset(hash, v_key, v_value);
+  rb_hash_aset(hash, rb_str_new2("priority"), rb_str_new2(str));
+  rb_hash_aset(hash, rb_str_new2(without_cmd), rb_str_new2(value));
 }
 
 static void split_line3(char *str, bool mask, VALUE hash, bool include_hash, char *salt, size_t salt_len, DIGEST_SHA digest_sha_func) {
@@ -312,7 +338,7 @@ static void split_line3(char *str, bool mask, VALUE hash, bool include_hash, cha
       } else if (strncmp(chunk, "from=", 5) == 0) {
         put_attr(chunk, hash, mask, include_hash, salt, salt_len, digest_sha_func);
         ptr[i] = '\0';
-        put_header(ptr, hash, mask);
+        put_header(ptr, i, hash, mask);
         break;
       }
     }
